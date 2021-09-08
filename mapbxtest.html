@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title></title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v2.4.1/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v2.4.1/mapbox-gl.css' rel='stylesheet' />
+    <script src='csv2geojson.js'></script>
+    <style>
+        body { margin:0; padding:0; }
+        #map { position:absolute; top:0; bottom:0; width:100%; }
+    </style>
+</head>
+<body>
+
+<div id='map'></div>
+<script>
+mapboxgl.accessToken = 'pk.eyJ1IjoiZGFuc3dpY2siLCJhIjoiY2l1dTUzcmgxMDJ0djJ0b2VhY2sxNXBiMyJ9.25Qs4HNEkHubd4_Awbd8Og';
+var map = new mapboxgl.Map({
+    container: 'map', // container id
+    style: 'mapbox://styles/mapbox/streets-v8', //stylesheet location
+    // center: [ 113.048778519374, 28.1721735387714], // starting position
+    // zoom: 15 // starting zoom
+    center: [ -89.89709901792442, 41.29146740952274], // starting position
+    zoom: 3 // starting zoom
+});
+
+$(document).ready(function() {
+    $.ajax({
+        type: "GET",
+        url: './airports.csv',
+        dataType: "text",
+        success: function(csvData) {makeGeoJSON(csvData);}
+     });
+});
+
+function makeGeoJSON(csvData) {
+    csv2geojson.csv2geojson(csvData, {
+        latfield: 'latitude',
+        lonfield: 'longitude',
+        delimiter: ','
+    }, function(err, data) {
+        map.on('load', function () {
+            map.addSource('airports', {
+            type: 'geojson',
+            data: data
+          });
+            map.addLayer(
+  {
+    id: 'airports-heat',
+    type: 'heatmap',
+    source: 'airports',
+    maxzoom: 15,
+    paint: {
+      // increase weight as diameter breast height increases
+      'heatmap-weight': {
+        property: 'dbh',
+        type: 'exponential',
+        stops: [
+          [1, 0],
+          [62, 1]
+        ]
+      },
+      // increase intensity as zoom level increases
+      'heatmap-intensity': {
+        stops: [
+          [11, 1],
+          [15, 3]
+        ]
+      },
+      // assign color values be applied to points depending on their density
+      'heatmap-color': [
+        'interpolate',
+        ['linear'],
+        ['heatmap-density'],
+        0,
+        'rgba(236,222,239,0)',
+        0.2,
+        'rgb(208,209,230)',
+        0.4,
+        'rgb(166,189,219)',
+        0.6,
+        'rgb(103,169,207)',
+        0.8,
+        'rgb(28,144,153)'
+      ],
+      // increase radius as zoom increases
+      'heatmap-radius': {
+        stops: [
+          [11, 15],
+          [15, 20]
+        ]
+      },
+      // decrease opacity to transition into the circle layer
+      'heatmap-opacity': {
+        default: 1,
+        stops: [
+          [14, 1],
+          [15, 0]
+        ]
+      }
+    }
+  },
+  'waterway-label'
+);
+
+map.addLayer(
+  {
+    id: 'airports-point',
+    type: 'circle',
+    source: 'airports',
+    minzoom: 14,
+    paint: {
+      // increase the radius of the circle as the zoom level and dbh value increases
+      'circle-radius': {
+        property: 'state',
+        type: 'exponential',
+        stops: [
+          [{ zoom: 15, value: 1 }, 5],
+          [{ zoom: 15, value: 62 }, 10],
+          [{ zoom: 22, value: 1 }, 20],
+          [{ zoom: 22, value: 62 }, 50]
+        ]
+      },
+      'circle-color': {
+        property: 'state',
+        type: 'exponential',
+        stops: [
+          [0, 'rgba(236,222,239,0)'],
+          [10, 'rgb(236,222,239)'],
+          [20, 'rgb(208,209,230)'],
+          [30, 'rgb(166,189,219)'],
+          [40, 'rgb(103,169,207)'],
+          [50, 'rgb(28,144,153)'],
+          [60, 'rgb(1,108,89)']
+        ]
+      },
+      'circle-stroke-color': 'white',
+      'circle-stroke-width': 1,
+      'circle-opacity': {
+        stops: [
+          [14, 0],
+          [15, 1]
+        ]
+      }
+    }
+  },
+  'waterway-label'
+);
+map.on('click', 'airports-point', ({ features }) => {
+  new mapboxgl.Popup()
+    .setLngLat(features[0].geometry.coordinates)
+    .setHTML(`<strong>State:</strong> ${features[0].properties.state}`)
+    .addTo(map);
+});
+
+        });    
+    });
+}
+</script>
+
+</body>
+</html>
