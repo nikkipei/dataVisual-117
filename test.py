@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import QWidget, QApplication, QVBoxLayout
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 
-from PyQt5.QtCore import QUrl
+
 class Example(QWidget):
 
     def __init__(self):
@@ -29,13 +29,12 @@ class Example(QWidget):
         self.show()
 
     def loadPage(self):
-        self.webEngineView.load(QUrl.fromUserInput("http://127.0.0.1:8085/test.html"))
+        # self.webEngineView.load(QUrl.fromUserInput("http://127.0.0.1:8085/test.html"))
 
-        # with open('www.baidu.com', 'r') as f:
+        with open('test.html', 'r') as f:
 
-        #     html = f.read()
-        #     self.webEngineView.setHtml(html)
-        #     self.webEngineView.
+            html = f.read()
+            self.webEngineView.setHtml(html)
 
 def main():
 
